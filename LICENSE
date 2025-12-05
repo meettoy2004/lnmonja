@@ -1,0 +1,98 @@
+
+#### **2. `Makefile`**
+```makefile
+.PHONY: all build test clean release docker deploy
+
+# Variables
+VERSION ?= $(shell git describe --tags --always --dirty)
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+BUILD_TIME = $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+
+# Build flags
+LDFLAGS = -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
+
+all: build test
+
+# Build all binaries
+build: build-server build-agent build-cli build-dashboard
+
+build-server:
+	@echo "Building server..."
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(LDFLAGS) -o bin/lnmonja-server ./cmd/lnmonja-server
+
+build-agent:
+	@echo "Building agent..."
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(LDFLAGS) -o bin/lnmonja-agent ./cmd/lnmonja-agent
+
+build-cli:
+	@echo "Building CLI..."
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(LDFLAGS) -o bin/lnmonja-cli ./cmd/lnmonja-cli
+
+build-dashboard:
+	@echo "Building dashboard..."
+	cd web/dashboard && npm run build
+
+# Test
+test:
+	@echo "Running tests..."
+	go test ./... -v -cover
+
+test-integration:
+	@echo "Running integration tests..."
+	go test ./tests/integration -v
+
+test-load:
+	@echo "Running load tests..."
+	go test ./tests/load -v -timeout 30m
+
+# Docker
+docker: docker-server docker-agent docker-dashboard
+
+docker-server:
+	docker build -f deploy/docker/Dockerfile.server -t lnmonja/server:$(VERSION) .
+
+docker-agent:
+	docker build -f deploy/docker/Dockerfile.agent -t lnmonja/agent:$(VERSION) .
+
+docker-dashboard:
+	docker build -f deploy/docker/Dockerfile.dashboard -t lnmonja/dashboard:$(VERSION) .
+
+# Release
+release: clean build docker
+	@echo "Creating release $(VERSION)"
+	tar -czf lnmonja-$(VERSION)-$(GOOS)-$(GOARCH).tar.gz \
+		bin/lnmonja-server \
+		bin/lnmonja-agent \
+		bin/lnmonja-cli \
+		scripts/ \
+		configs/
+
+# Clean
+clean:
+	@echo "Cleaning..."
+	rm -rf bin/ dist/ cover.out
+	rm -f lnmonja-*.tar.gz
+
+# Development
+dev-server:
+	@echo "Starting server in dev mode..."
+	go run ./cmd/lnmonja-server --config configs/server-config.yaml
+
+dev-agent:
+	@echo "Starting agent in dev mode..."
+	go run ./cmd/lnmonja-agent --config configs/agent-config.yaml
+
+# Lint
+lint:
+	golangci-lint run ./...
+
+# Generate protobuf
+proto:
+	cd proto && ./generate.sh
+
+# Install dependencies
+deps:
+	go mod download
+	go mod tidy
+	cd web/dashboard && npm install

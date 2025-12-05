@@ -1,0 +1,63 @@
+groups:
+  - name: kubernetes
+    interval: 30s
+    rules:
+      - alert: K8sPodCrashLooping
+        expr: increase(kube_pod_container_status_restarts_total[5m]) > 3
+        for: 2m
+        labels:
+          severity: critical
+          category: kubernetes
+        annotations:
+          summary: "Pod {{ $labels.pod }} is crash looping"
+          description: "Container {{ $labels.container }} restarted {{ $value }} times in 5 minutes"
+
+      - alert: K8sPodNotReady
+        expr: kube_pod_status_ready{condition="false"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: kubernetes
+        annotations:
+          summary: "Pod {{ $labels.pod }} is not ready"
+          description: "Pod has been not ready for more than 5 minutes"
+
+      - alert: K8sNodeNotReady
+        expr: kube_node_status_condition{condition="Ready", status="false"} == 1
+        for: 2m
+        labels:
+          severity: critical
+          category: kubernetes
+        annotations:
+          summary: "Node {{ $labels.node }} is not ready"
+          description: "Node has been not ready for 2 minutes"
+
+      - alert: K8sHighCPUUsage
+        expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod, namespace) / kube_pod_container_resource_limits_cpu_cores > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          category: kubernetes
+        annotations:
+          summary: "High CPU usage in pod {{ $labels.pod }}"
+          description: "CPU usage is {{ $value }}% of limit"
+
+      - alert: K8sHighMemoryUsage
+        expr: container_memory_working_set_bytes / kube_pod_container_resource_limits_memory_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          category: kubernetes
+        annotations:
+          summary: "High memory usage in pod {{ $labels.pod }}"
+          description: "Memory usage is {{ $value }}% of limit"
+
+      - alert: K8sOutOfPods
+        expr: kube_node_status_capacity_pods - kube_node_status_allocatable_pods < 10
+        for: 5m
+        labels:
+          severity: warning
+          category: kubernetes
+        annotations:
+          summary: "Node {{ $labels.node }} is running out of pod capacity"
+          description: "Only {{ $value }} pods left available"

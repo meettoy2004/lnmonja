@@ -1,0 +1,257 @@
+agent:
+  node_id: ""  # Auto-detected from hostname if empty
+  hostname: ""  # Override system hostname
+  tags: {}  # Custom tags for this node
+  
+  server:
+    address: "localhost:9090"
+    tls:
+      enabled: true
+      ca_cert: "/etc/lnmonja/certs/ca.crt"
+      client_cert: "/etc/lnmonja/certs/client.crt"
+      client_key: "/etc/lnmonja/certs/client.key"
+      server_name: "lnmonja-server"
+      insecure_skip_verify: false
+    
+  connection:
+    retry_interval: "5s"
+    max_retries: 0  # 0 = infinite retries
+    heartbeat_interval: "30s"
+    timeout: "10s"
+    buffer_size: 10000
+    max_reconnect_delay: "5m"
+    keepalive:
+      enabled: true
+      time: "30s"
+      timeout: "10s"
+    
+  discovery:
+    enabled: true
+    interval: "1m"
+    kubernetes:
+      enabled: true
+      node_name: ""  # Auto-detected
+      namespace: "lnmonja"
+      
+  metadata:
+    collect_interval: "5m"
+    include:
+      - os
+      - kernel
+      - cpu_info
+      - memory_info
+      - disk_info
+      - network_interfaces
+
+collectors:
+  system:
+    enabled: true
+    interval: "1s"
+    metrics:
+      cpu:
+        enabled: true
+        per_cpu: true
+        include_total: true
+        include_guest: false
+        
+      memory:
+        enabled: true
+        include_swap: true
+        include_cached: true
+        include_buffers: true
+        
+      load:
+        enabled: true
+        include_per_cpu_load: false
+        
+      uptime:
+        enabled: true
+        
+      disk:
+        enabled: true
+        ignore_fs_types: ["tmpfs", "devtmpfs", "squashfs"]
+        ignore_mount_points: ["/boot", "/snap"]
+        include_partitions: false
+        
+      network:
+        enabled: true
+        interfaces: ["eth0", "ens", "enp", "bond"]  # Regex patterns
+        include_all: false
+        include_loopback: false
+        
+      processes:
+        enabled: true
+        max_processes: 500
+        
+  container:
+    enabled: true
+    interval: "2s"
+    runtime: "auto"  # docker, containerd, podman, auto
+    docker_socket: "/var/run/docker.sock"
+    containerd_socket: "/run/containerd/containerd.sock"
+    
+    metrics:
+      cpu_usage:
+        enabled: true
+        
+      memory_usage:
+        enabled: true
+        include_limit: true
+        
+      network_io:
+        enabled: true
+        per_interface: false
+        
+      block_io:
+        enabled: true
+        
+      pids:
+        enabled: true
+        
+    labels:
+      include: ["*"]  # Include all labels
+      exclude: []  # Exclude specific labels
+      
+    filters:
+      name: []  # Filter containers by name
+      label: []  # Filter by labels
+      
+  kubernetes:
+    enabled: false  # Enable when running in K8s
+    interval: "5s"
+    kubeconfig: ""  # Auto-detected
+    
+    metrics:
+      pods:
+        enabled: true
+        include_metrics: true
+        
+      deployments:
+        enabled: true
+        
+      services:
+        enabled: true
+        
+      nodes:
+        enabled: true
+        
+      events:
+        enabled: true
+        max_age: "1h"
+        
+  process:
+    enabled: true
+    interval: "5s"
+    max_processes: 1000
+    
+    metrics:
+      cpu_percent:
+        enabled: true
+        percpu: false
+        
+      memory_percent:
+        enabled: true
+        
+      io_counters:
+        enabled: true
+        
+      num_threads:
+        enabled: true
+        
+      open_files:
+        enabled: false
+        
+      connections:
+        enabled: false
+        
+    filters:
+      exe: []  # Filter by executable name
+      user: []  # Filter by user
+      pid: []   # Filter by PID
+      
+  ebpf:
+    enabled: false  # Requires CAP_SYS_ADMIN
+    interval: "1s"
+    
+    programs:
+      tcp_connect:
+        enabled: true
+        
+      tcp_retransmit:
+        enabled: true
+        
+      block_io_latency:
+        enabled: true
+        
+      cpu_scheduler:
+        enabled: true
+        
+      oom_kill:
+        enabled: true
+        
+  custom:
+    enabled: true
+    scripts_path: "/etc/lnmonja/collectors"
+    execution_timeout: "30s"
+    max_parallel: 5
+
+logging:
+  level: "info"
+  format: "text"  # text, json
+  output: "stdout"  # stdout, file, both
+  path: "/var/log/lnmonja/agent.log"
+  
+  rotation:
+    enabled: true
+    max_size: 50
+    max_backups: 5
+    max_age: 30
+    compress: true
+
+security:
+  run_as_user: "lnmonja"
+  run_as_group: "lnmonja"
+  
+  capabilities:
+    - CAP_SYS_PTRACE
+    - CAP_DAC_READ_SEARCH
+    - CAP_NET_ADMIN  # For network metrics
+    - CAP_SYS_ADMIN  # For eBPF
+    
+  seccomp_profile: ""
+  apparmor_profile: ""
+  
+  drop_capabilities:
+    - ALL
+
+resource_limits:
+  cpu: "0.5"
+  memory: "256Mi"
+  max_goroutines: 1000
+  max_open_files: 65536
+  
+  gc:
+    enabled: true
+    interval: "5m"
+    threshold_percent: 80
+
+buffer:
+  enabled: true
+  max_size: 10000
+  flush_interval: "1s"
+  retry_on_failure: true
+  max_retry_delay: "5m"
+  
+  disk_buffer:
+    enabled: true
+    path: "/var/lib/lnmonja/buffer"
+    max_size: "100MB"
+
+telemetry:
+  enabled: true
+  interval: "1m"
+  metrics:
+    - goroutines
+    - memory
+    - buffer_size
+    - collector_duration

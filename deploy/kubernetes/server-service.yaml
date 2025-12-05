@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lnmonja-server
+  namespace: lnmonja
+spec:
+  selector:
+    app: lnmonja-server
+  ports:
+  - name: grpc
+    port: 9090
+    targetPort: 9090
+  - name: http
+    port: 8080
+    targetPort: 8080
+  - name: ws
+    port: 3000
+    targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lnmonja-server-external
+  namespace: lnmonja
+spec:
+  selector:
+    app: lnmonja-server
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer

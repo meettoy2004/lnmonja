@@ -1,0 +1,186 @@
+syntax = "proto3";
+
+package lnmonja;
+
+option go_package = "github.com/meettoy2004/lnmonja/proto";
+
+import "google/protobuf/timestamp.proto";
+
+service MonitorService {
+  // Agent registration
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  
+  // Bidirectional metric streaming
+  rpc StreamMetrics(stream MetricBatch) returns (stream ControlMessage);
+  
+  // Heartbeat
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  
+  // Configuration updates
+  rpc UpdateConfig(ConfigUpdate) returns (ConfigAck);
+}
+
+// Registration
+message RegisterRequest {
+  string node_id = 1;
+  string hostname = 2;
+  string os = 3;
+  string arch = 4;
+  string version = 5;
+  map<string, string> labels = 6;
+  repeated CollectorInfo collectors = 7;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  string message = 2;
+  string session_id = 3;
+  int64 heartbeat_interval = 4;
+  repeated CollectorConfig collectors = 5;
+}
+
+// Metrics
+message Metric {
+  string name = 1;
+  double value = 2;
+  int64 timestamp = 3;
+  map<string, string> labels = 4;
+  MetricType type = 5;
+  string help = 6;
+  string unit = 7;
+}
+
+message MetricBatch {
+  string node_id = 1;
+  string session_id = 2;
+  repeated Metric metrics = 3;
+  int64 batch_seq = 4;
+  google.protobuf.Timestamp sent_at = 5;
+}
+
+enum MetricType {
+  GAUGE = 0;
+  COUNTER = 1;
+  HISTOGRAM = 2;
+  SUMMARY = 3;
+}
+
+// Control messages
+message ControlMessage {
+  oneof command {
+    CollectCommand collect = 1;
+    ConfigUpdate config = 2;
+    string stop = 3;
+    string restart = 4;
+  }
+}
+
+message CollectCommand {
+  repeated string collectors = 1;
+  int64 interval = 2;
+}
+
+message ConfigUpdate {
+  string node_id = 1;
+  string config_yaml = 2;
+  bool restart_required = 3;
+}
+
+message ConfigAck {
+  bool success = 1;
+  string message = 2;
+}
+
+// Heartbeat
+message HeartbeatRequest {
+  string node_id = 1;
+  string session_id = 2;
+  NodeStatus status = 3;
+}
+
+message HeartbeatResponse {
+  bool alive = 1;
+  int64 next_heartbeat = 2;
+}
+
+// Collectors
+message CollectorInfo {
+  string name = 1;
+  bool enabled = 2;
+  int64 interval = 3;
+  map<string, string> config = 4;
+}
+
+message CollectorConfig {
+  string name = 1;
+  bool enabled = 2;
+  int64 interval = 3;
+  map<string, string> params = 4;
+}
+
+// Node status
+enum NodeStatus {
+  HEALTHY = 0;
+  DEGRADED = 1;
+  UNHEALTHY = 2;
+}
+
+// API messages (for HTTP API)
+message QueryRequest {
+  string query = 1;
+  int64 start = 2;
+  int64 end = 3;
+  int64 step = 4;
+  map<string, string> labels = 5;
+}
+
+message QueryResponse {
+  repeated TimeSeries series = 1;
+  string error = 2;
+}
+
+message TimeSeries {
+  map<string, string> labels = 1;
+  repeated Sample samples = 2;
+}
+
+message Sample {
+  int64 timestamp = 1;
+  double value = 2;
+}
+
+// Alerting
+message Alert {
+  string id = 1;
+  string name = 2;
+  string expr = 3;
+  map<string, string> labels = 4;
+  map<string, string> annotations = 5;
+  AlertState state = 6;
+  double value = 7;
+  int64 active_at = 8;
+  int64 resolved_at = 9;
+}
+
+enum AlertState {
+  INACTIVE = 0;
+  PENDING = 1;
+  FIRING = 2;
+  RESOLVED = 3;
+}
+
+message AlertNotification {
+  Alert alert = 1;
+  string receiver = 2;
+  NotificationChannel channel = 3;
+  int64 sent_at = 4;
+  string status = 5;
+}
+
+enum NotificationChannel {
+  SLACK = 0;
+  EMAIL = 1;
+  WEBHOOK = 2;
+  PAGERDUTY = 3;
+  TELEGRAM = 4;
+}

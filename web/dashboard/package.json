@@ -1,0 +1,26 @@
+{
+	"name": "lnmonja-dashboard",
+	"version": "1.0.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-check --tsconfig ./tsconfig.json"
+	},
+	"devDependencies": {
+		"@sveltejs/vite-plugin-svelte": "^2.0.0",
+		"@types/node": "^20.0.0",
+		"svelte": "^4.0.0",
+		"svelte-check": "^3.0.0",
+		"typescript": "^5.0.0",
+		"vite": "^4.0.0"
+	},
+	"dependencies": {
+		"echarts": "^5.4.0",
+		"echarts-for-svelte": "^1.0.0",
+		"reconnecting-websocket": "^4.4.0",
+		"date-fns": "^2.30.0",
+		"axios": "^1.4.0"
+	}
+}

@@ -1,0 +1,129 @@
+dashboard:
+  name: "Default Dashboard"
+  version: "1.0"
+  description: "Default system monitoring dashboard"
+  refresh_interval: "5s"
+  
+  variables:
+    - name: node
+      label: "Node"
+      type: query
+      query: "label_values(system_cpu_usage, node)"
+      refresh: 2
+      multi: true
+      include_all: true
+      
+    - name: interval
+      label: "Time Range"
+      type: interval
+      default: "5m"
+      values: ["1m", "5m", "15m", "30m", "1h", "3h", "6h", "12h", "1d"]
+      
+  rows:
+    - name: "System Overview"
+      height: 300
+      panels:
+        - title: "CPU Usage"
+          type: timeseries
+          span: 6
+          targets:
+            - expr: "system_cpu_usage{node=~\"$node\"}"
+              legend: "{{node}} - CPU {{cpu}}"
+          options:
+            yaxis:
+              min: 0
+              max: 100
+              format: percent
+            tooltip:
+              shared: true
+              sort: descending
+              
+        - title: "Memory Usage"
+          type: timeseries
+          span: 6
+          targets:
+            - expr: "system_memory_usage_percent{node=~\"$node\"}"
+              legend: "{{node}}"
+          options:
+            yaxis:
+              min: 0
+              max: 100
+              format: percent
+              
+    - name: "Network & Disk"
+      height: 300
+      panels:
+        - title: "Network Traffic"
+          type: timeseries
+          span: 6
+          targets:
+            - expr: "rate(system_network_receive_bytes_total{node=~\"$node\"}[$interval])"
+              legend: "{{node}} {{interface}} RX"
+            - expr: "rate(system_network_transmit_bytes_total{node=~\"$node\"}[$interval])"
+              legend: "{{node}} {{interface}} TX"
+          options:
+            yaxis:
+              format: bytes
+            tooltip:
+              shared: true
+              
+        - title: "Disk Usage"
+          type: gauge
+          span: 6
+          targets:
+            - expr: "system_disk_usage_percent{node=~\"$node\",mount!=\"/tmp\"}"
+              legend: "{{mount}}"
+          options:
+            min: 0
+            max: 100
+            thresholds:
+              steps:
+                - color: "green"
+                  value: null
+                - color: "yellow"
+                  value: 80
+                - color: "red"
+                  value: 90
+                  
+    - name: "Processes & Containers"
+      height: 300
+      panels:
+        - title: "Top Processes by CPU"
+          type: table
+          span: 6
+          targets:
+            - expr: "topk(10, process_cpu_percent{node=~\"$node\"})"
+          options:
+            show_header: true
+            sort_by: "value"
+            sort_order: "desc"
+            
+        - title: "Container CPU Usage"
+          type: timeseries
+          span: 6
+          targets:
+            - expr: "container_cpu_usage_seconds_total{node=~\"$node\"}"
+              legend: "{{container}}"
+          options:
+            yaxis:
+              format: percent
+              
+    - name: "Alerts"
+      height: 200
+      panels:
+        - title: "Active Alerts"
+          type: alertlist
+          span: 12
+          targets:
+            - state: "firing"
+          options:
+            show: "current"
+            sort_order: "severity"
+            expand_rows: true
+            
+  annotations:
+    - name: "Deployments"
+      datasource: "lnmonja"
+      query: "kube_deployment_created"
+      icon_color: "green"
+      show_in: 0

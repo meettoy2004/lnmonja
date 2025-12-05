@@ -1,0 +1,165 @@
+server:
+  grpc:
+    address: "0.0.0.0"
+    port: 9090
+    tls:
+      enabled: true
+      cert_file: "/etc/lnmonja/certs/server.crt"
+      key_file: "/etc/lnmonja/certs/server.key"
+      client_ca_file: "/etc/lnmonja/certs/ca.crt"
+    
+  http:
+    address: "0.0.0.0"
+    port: 8080
+    cors:
+      enabled: true
+      allowed_origins: ["*"]
+      allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed_headers: ["*"]
+    
+  websocket:
+    address: "0.0.0.0"
+    port: 3000
+    read_buffer_size: 1024
+    write_buffer_size: 1024
+    max_message_size: 512000
+    ping_interval: 30
+
+storage:
+  engine: "badger"
+  path: "/var/lib/lnmonja/data"
+  retention_period: "720h"  # 30 days
+  compression: true
+  shard_size: "1GB"
+  sync_interval: "30s"
+  
+  tiering:
+    enabled: true
+    hot_retention: "24h"
+    warm_retention: "168h"
+    cold_retention: "720h"
+    cold_path: "/var/lib/lnmonja/archive"
+    
+  badger_options:
+    value_log_file_size: 1073741824  # 1GB
+    mem_table_size: 67108864  # 64MB
+    base_table_size: 2097152  # 2MB
+    base_level_size: 10485760  # 10MB
+
+cluster:
+  enabled: false
+  node_id: "server-01"
+  peers: []
+  replication_factor: 2
+  election_timeout: "5s"
+  heartbeat_interval: "2s"
+  advertise_address: ""
+
+alerting:
+  enabled: true
+  rules_path: "/etc/lnmonja/alert-rules"
+  evaluation_interval: "10s"
+  default_cooldown: "5m"
+  
+  notification:
+    webhooks: []
+    
+    slack:
+      enabled: false
+      webhook_url: ""
+      channel: "#alerts"
+      username: "lnmonja"
+      icon_emoji: ":warning:"
+    
+    email:
+      enabled: false
+      smtp_host: "smtp.gmail.com"
+      smtp_port: 587
+      username: ""
+      password: ""
+      from: "lnmonja@example.com"
+      to: ["admin@example.com"]
+      
+    pagerduty:
+      enabled: false
+      integration_key: ""
+      severity_map:
+        critical: "critical"
+        warning: "warning"
+        info: "info"
+
+authentication:
+  enabled: true
+  jwt_secret: "change-this-in-production"
+  token_expiry: "24h"
+  
+  users:
+    - username: "admin"
+      password_hash: "$2a$10$VuuK6wBm7LzH8lYz7wQz6eKq3JjLmNpQrStUvWxYzA1B2C3D4E5F6G7H8I9J0"  # bcrypt of "admin"
+      role: "admin"
+      email: "admin@example.com"
+      
+    - username: "viewer"
+      password_hash: "$2a$10$AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123"  # bcrypt of "viewer"
+      role: "viewer"
+      email: "viewer@example.com"
+
+logging:
+  level: "info"
+  format: "json"
+  output: "file"
+  path: "/var/log/lnmonja/server.log"
+  max_size: 100
+  max_backups: 5
+  max_age: 30
+  
+  rotation:
+    enabled: true
+    max_size_mb: 100
+    max_age_days: 30
+    max_backups: 5
+    compress: true
+
+telemetry:
+  metrics_enabled: true
+  metrics_path: "/metrics"
+  health_check_enabled: true
+  health_check_path: "/health"
+  profiling_enabled: false
+  profiling_port: 6060
+  profiling_path: "/debug/pprof"
+
+plugins:
+  enabled: true
+  path: "/etc/lnmonja/plugins"
+  scan_interval: "30s"
+  auto_reload: true
+  
+  python:
+    enabled: true
+    interpreter: "/usr/bin/python3"
+    virtualenv_path: "/etc/lnmonja/venv"
+    
+  custom_collectors:
+    enabled: true
+    path: "/etc/lnmonja/collectors"
+    execution_timeout: "30s"
+
+cache:
+  enabled: true
+  ttl: "5m"
+  max_size: 10000
+  
+  redis:
+    enabled: false
+    address: "localhost:6379"
+    password: ""
+    db: 0
+
+limits:
+  max_nodes: 1000
+  max_metrics_per_node: 10000
+  max_connections: 10000
+  max_concurrent_queries: 100
+  query_timeout: "30s"
+  write_timeout: "10s"

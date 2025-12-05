@@ -1,0 +1,82 @@
+groups:
+  - name: system
+    interval: 10s
+    rules:
+      - alert: HighCPUUsage
+        expr: system_cpu_usage > 80
+        for: 2m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High CPU usage on {{ $labels.node }}"
+          description: "CPU usage is {{ $value }}% (threshold: 80%)"
+
+      - alert: HighMemoryUsage
+        expr: system_memory_usage_percent > 90
+        for: 2m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High memory usage on {{ $labels.node }}"
+          description: "Memory usage is {{ $value }}% (threshold: 90%)"
+
+      - alert: LowDiskSpace
+        expr: system_disk_usage_percent{mount!="/tmp"} > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "Low disk space on {{ $labels.mount }} ({{ $labels.node }})"
+          description: "Disk usage is {{ $value }}% (threshold: 85%)"
+
+      - alert: CriticalDiskSpace
+        expr: system_disk_usage_percent{mount!="/tmp"} > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "Critical disk space on {{ $labels.mount }} ({{ $labels.node }})"
+          description: "Disk usage is {{ $value }}% (threshold: 95%)"
+
+      - alert: HighLoadAverage
+        expr: system_load1 > system_cpu_cores * 2
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "High load average on {{ $labels.node }}"
+          description: "1-minute load average is {{ $value }} (CPUs: {{ system_cpu_cores }})"
+
+      - alert: SystemOOMKills
+        expr: increase(system_oom_kills[5m]) > 0
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "OOM kills detected on {{ $labels.node }}"
+          description: "{{ $value }} OOM kills in the last 5 minutes"
+
+      - alert: HighNetworkErrors
+        expr: rate(system_network_errors_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "High network errors on {{ $labels.interface }} ({{ $labels.node }})"
+          description: "{{ $value }} errors per second"
+
+      - alert: HighTCPRetransmits
+        expr: rate(system_tcp_retransmits[5m]) > 100
+        for: 2m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "High TCP retransmits on {{ $labels.node }}"
+          description: "{{ $value }} retransmits per second"
