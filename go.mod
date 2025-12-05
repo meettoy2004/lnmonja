@@ -3,7 +3,7 @@ module github.com/meettoy2004/lnmonja
 go 1.21
 
 require (
-    github.com/badgerodon/badger/v3 v3.2103.5
+    github.com/dgraph-io/badger/v3 v3.2103.5
     github.com/cilium/ebpf v0.12.3
     github.com/docker/docker v24.0.7+incompatible
     github.com/go-chi/chi/v5 v5.0.10

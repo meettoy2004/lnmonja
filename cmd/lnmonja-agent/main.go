@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/yourusername/lnmonja/internal/agent"
-	"github.com/yourusername/lnmonja/pkg/utils"
+	"github.com/meettoy2004/lnmonja/internal/agent"
+	"github.com/meettoy2004/lnmonja/pkg/utils"
 	"go.uber.org/zap"
 )
 

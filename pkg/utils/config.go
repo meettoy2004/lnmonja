@@ -48,17 +48,30 @@ type Config struct {
 		} `yaml:"websocket"`
 	} `yaml:"server"`
 
-	Storage struct {
-		Engine           string        `yaml:"engine"`
-		Path             string        `yaml:"path"`
-		RetentionPeriod  time.Duration `yaml:"retention_period"`
-		Compression      bool          `yaml:"compression"`
-		ShardSize        string        `yaml:"shard_size"`
-		SyncInterval     time.Duration `yaml:"sync_interval"`
-		SyncWrites       bool          `yaml:"sync_writes"`
-		ValueLogFileSize int64         `yaml:"value_log_file_size"`
-		MemTableSize     int64         `yaml:"mem_table_size"`
-	} `yaml:"storage"`
+	Storage StorageConfig `yaml:"storage"`
+
+	Alerting struct {
+		Enabled            bool          `yaml:"enabled"`
+		RulesPath          string        `yaml:"rules_path"`
+		EvaluationInterval time.Duration `yaml:"evaluation_interval"`
+		DefaultCooldown    time.Duration `yaml:"default_cooldown"`
+		Notification       struct {
+			Slack struct {
+				Enabled    bool   `yaml:"enabled"`
+				WebhookURL string `yaml:"webhook_url"`
+				Channel    string `yaml:"channel"`
+			} `yaml:"slack"`
+			Email struct {
+				Enabled  bool     `yaml:"enabled"`
+				SMTPHost string   `yaml:"smtp_host"`
+				SMTPPort int      `yaml:"smtp_port"`
+				Username string   `yaml:"username"`
+				Password string   `yaml:"password"`
+				From     string   `yaml:"from"`
+				To       []string `yaml:"to"`
+			} `yaml:"email"`
+		} `yaml:"notification"`
+	} `yaml:"alerting"`
 
 	Authentication struct {
 		Enabled    bool     `yaml:"enabled"`
@@ -120,6 +133,32 @@ type User struct {
 	Password string `yaml:"password"`
 	Role     string `yaml:"role"`
 	Email    string `yaml:"email"`
+}
+
+type StorageConfig struct {
+	Engine           string        `yaml:"engine"`
+	Path             string        `yaml:"path"`
+	RetentionPeriod  time.Duration `yaml:"retention_period"`
+	Compression      bool          `yaml:"compression"`
+	ShardSize        string        `yaml:"shard_size"`
+	SyncInterval     time.Duration `yaml:"sync_interval"`
+	SyncWrites       bool          `yaml:"sync_writes"`
+	ValueLogFileSize int64         `yaml:"value_log_file_size"`
+	MemTableSize     int64         `yaml:"mem_table_size"`
+	Tiering          struct {
+		Enabled       bool          `yaml:"enabled"`
+		HotRetention  time.Duration `yaml:"hot_retention"`
+		WarmRetention time.Duration `yaml:"warm_retention"`
+		ColdRetention time.Duration `yaml:"cold_retention"`
+		ColdPath      string        `yaml:"cold_path"`
+	} `yaml:"tiering"`
+}
+
+type LogConfig struct {
+	Level  string `yaml:"level"`
+	Format string `yaml:"format"`
+	Output string `yaml:"output"`
+	Path   string `yaml:"path"`
 }
 
 func LoadConfig(path string) (*Config, error) {

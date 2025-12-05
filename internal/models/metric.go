@@ -109,3 +109,52 @@ const (
 	AlertStateFiring
 	AlertStateResolved
 )
+
+func (s AlertState) String() string {
+	switch s {
+	case AlertStateInactive:
+		return "inactive"
+	case AlertStatePending:
+		return "pending"
+	case AlertStateFiring:
+		return "firing"
+	case AlertStateResolved:
+		return "resolved"
+	default:
+		return "unknown"
+	}
+}
+
+func (s NodeStatus) String() string {
+	switch s {
+	case NodeStatusUnknown:
+		return "unknown"
+	case NodeStatusHealthy:
+		return "healthy"
+	case NodeStatusDegraded:
+		return "degraded"
+	case NodeStatusUnhealthy:
+		return "unhealthy"
+	case NodeStatusOffline:
+		return "offline"
+	default:
+		return "unknown"
+	}
+}
+
+// Query represents a metrics query
+type Query struct {
+	MetricName string
+	StartTime  time.Time
+	EndTime    time.Time
+	Labels     map[string]string
+	Step       time.Duration
+}
+
+// AlertFilter represents filters for querying alerts
+type AlertFilter struct {
+	State    *AlertState
+	Severity string
+	NodeID   string
+	Since    *time.Time
+}
