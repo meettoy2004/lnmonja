@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/badgerodon/badger/v3"
+	"github.com/dgraph-io/badger/v3"
 	"github.com/meettoy2004/lnmonja/internal/models"
 	"github.com/meettoy2004/lnmonja/pkg/utils"
 	"go.uber.org/zap"
@@ -267,6 +267,247 @@ func (s *BadgerStore) runCompaction() {
 			}
 		}
 	}
+}
+
+// SaveNode saves a node to storage
+func (s *BadgerStore) SaveNode(node *models.Node) error {
+	data, err := json.Marshal(node)
+	if err != nil {
+		return err
+	}
+
+	return s.db.Update(func(txn *badger.Txn) error {
+		key := []byte(fmt.Sprintf("node:%s", node.ID))
+		return txn.Set(key, data)
+	})
+}
+
+// GetNode retrieves a node by ID
+func (s *BadgerStore) GetNode(nodeID string) (*models.Node, error) {
+	var node models.Node
+
+	err := s.db.View(func(txn *badger.Txn) error {
+		key := []byte(fmt.Sprintf("node:%s", nodeID))
+		item, err := txn.Get(key)
+		if err != nil {
+			return err
+		}
+
+		return item.Value(func(val []byte) error {
+			return json.Unmarshal(val, &node)
+		})
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &node, nil
+}
+
+// ListNodes lists all nodes
+func (s *BadgerStore) ListNodes() ([]*models.Node, error) {
+	var nodes []*models.Node
+
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = []byte("node:")
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			err := item.Value(func(val []byte) error {
+				var node models.Node
+				if err := json.Unmarshal(val, &node); err != nil {
+					return err
+				}
+				nodes = append(nodes, &node)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return nodes, err
+}
+
+// SaveAlert saves an alert
+func (s *BadgerStore) SaveAlert(alert *models.Alert) error {
+	data, err := json.Marshal(alert)
+	if err != nil {
+		return err
+	}
+
+	return s.db.Update(func(txn *badger.Txn) error {
+		key := []byte(fmt.Sprintf("alert:%s", alert.ID))
+		return txn.Set(key, data)
+	})
+}
+
+// GetAlerts retrieves alerts based on filter
+func (s *BadgerStore) GetAlerts(filter *models.AlertFilter) ([]*models.Alert, error) {
+	var alerts []*models.Alert
+
+	err := s.db.View(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = []byte("alert:")
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			err := item.Value(func(val []byte) error {
+				var alert models.Alert
+				if err := json.Unmarshal(val, &alert); err != nil {
+					return err
+				}
+
+				// Apply filters
+				if filter != nil {
+					if filter.State != nil && alert.State != *filter.State {
+						return nil
+					}
+					if filter.NodeID != "" && alert.Labels["node"] != filter.NodeID {
+						return nil
+					}
+				}
+
+				alerts = append(alerts, &alert)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return alerts, err
+}
+
+// WriteCompressedMetrics writes compressed metrics
+func (s *BadgerStore) WriteCompressedMetrics(compressed *CompressedMetrics) error {
+	if compressed == nil {
+		return fmt.Errorf("compressed metrics is nil")
+	}
+
+	// For now, just store the compressed data as-is
+	// In a real implementation, you might want additional indexing
+	return s.db.Update(func(txn *badger.Txn) error {
+		key := []byte(fmt.Sprintf("compressed:%d", time.Now().UnixNano()))
+		return txn.Set(key, compressed.Data)
+	})
+}
+
+// DeleteMetricsOlderThan deletes metrics older than the specified time
+func (s *BadgerStore) DeleteMetricsOlderThan(cutoff time.Time) (int64, error) {
+	var deleted int64
+
+	cutoffNano := cutoff.UnixNano()
+
+	err := s.db.Update(func(txn *badger.Txn) error {
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = []byte("metric:")
+
+		it := txn.NewIterator(opts)
+		defer it.Close()
+
+		for it.Rewind(); it.Valid(); it.Next() {
+			item := it.Item()
+			key := item.Key()
+
+			// Extract timestamp from key
+			if len(key) > 7 {
+				// Assuming key format: metric:<node_id>:<metric_name>:<timestamp>
+				// We need to check if the timestamp is older than cutoff
+				err := item.Value(func(val []byte) error {
+					var metric models.Metric
+					if err := json.Unmarshal(val, &metric); err != nil {
+						return nil // Skip invalid entries
+					}
+
+					if metric.Timestamp.Before(cutoff) || metric.Timestamp.UnixNano() < cutoffNano {
+						if err := txn.Delete(key); err == nil {
+							deleted++
+						}
+					}
+
+					return nil
+				})
+				if err != nil {
+					continue
+				}
+			}
+		}
+
+		return nil
+	})
+
+	return deleted, err
+}
+
+// CompactMetricsInRange compacts metrics in a time range
+func (s *BadgerStore) CompactMetricsInRange(start, end time.Time) error {
+	// Placeholder for compaction logic
+	// In a real implementation, this would downsample or compress metrics
+	s.logger.Debug("Compacting metrics",
+		zap.Time("start", start),
+		zap.Time("end", end),
+	)
+	return nil
+}
+
+// RunGC runs garbage collection
+func (s *BadgerStore) RunGC() error {
+	return s.db.RunValueLogGC(0.5)
+}
+
+// GetStats returns database statistics
+func (s *BadgerStore) GetStats() (*DBStats, error) {
+	stats := &DBStats{
+		OldestMetric: time.Now(),
+		NewestMetric: time.Time{},
+	}
+
+	// Count metrics, nodes, alerts
+	s.db.View(func(txn *badger.Txn) error {
+		// Count metrics
+		opts := badger.DefaultIteratorOptions
+		opts.Prefix = []byte("metric:")
+		it := txn.NewIterator(opts)
+		for it.Rewind(); it.Valid(); it.Next() {
+			stats.TotalMetrics++
+		}
+		it.Close()
+
+		// Count nodes
+		opts.Prefix = []byte("node:")
+		it = txn.NewIterator(opts)
+		for it.Rewind(); it.Valid(); it.Next() {
+			stats.TotalNodes++
+		}
+		it.Close()
+
+		// Count alerts
+		opts.Prefix = []byte("alert:")
+		it = txn.NewIterator(opts)
+		for it.Rewind(); it.Valid(); it.Next() {
+			stats.TotalAlerts++
+		}
+		it.Close()
+
+		return nil
+	})
+
+	return stats, nil
 }
 
 func (s *BadgerStore) Close() error {
