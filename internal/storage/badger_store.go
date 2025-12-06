@@ -1,8 +1,12 @@
 package storage
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
@@ -79,8 +83,7 @@ func (s *BadgerStore) QueryMetrics(query string, start, end time.Time, step time
 		
 		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			item := it.Item()
-			key := item.Key()
-			
+
 			// Decode metric from key/value
 			metric, err := s.decodeMetric(item)
 			if err != nil {
