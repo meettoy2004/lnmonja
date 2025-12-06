@@ -237,6 +237,44 @@ func (s *GRPCServer) StreamMetrics(stream protocol.MonitorService_StreamMetricsS
 	return nil
 }
 
+// Heartbeat handles heartbeat requests from agents
+func (s *GRPCServer) Heartbeat(ctx context.Context, req *protocol.HeartbeatRequest) (*protocol.HeartbeatResponse, error) {
+	// Get session
+	s.sessionsMu.RLock()
+	session, exists := s.sessions[req.SessionId]
+	s.sessionsMu.RUnlock()
+
+	if !exists {
+		return nil, status.Error(codes.Unauthenticated, "invalid session")
+	}
+
+	// Update last seen time
+	session.LastSeen = time.Now()
+
+	// Update node status
+	s.nodeMgr.UpdateNodeStatus(session.NodeID, models.NodeStatusHealthy)
+
+	return &protocol.HeartbeatResponse{
+		Alive:         true,
+		NextHeartbeat: time.Now().Add(s.config.Server.GRPC.HeartbeatInterval).Unix(),
+	}, nil
+}
+
+// UpdateConfig handles configuration update requests
+func (s *GRPCServer) UpdateConfig(ctx context.Context, req *protocol.ConfigUpdate) (*protocol.ConfigAck, error) {
+	s.logger.Info("Config update received",
+		zap.String("node_id", req.NodeId),
+		zap.Bool("restart_required", req.RestartRequired),
+	)
+
+	// In a real implementation, this would apply the config update
+	// For now, we just acknowledge it
+	return &protocol.ConfigAck{
+		Success: true,
+		Message: "Configuration update acknowledged",
+	}, nil
+}
+
 func (s *GRPCServer) processMetrics(session *Session, batch *protocol.MetricBatch) {
 	// Convert protobuf metrics to internal models
 	metrics := make([]*models.Metric, 0, len(batch.Metrics))
