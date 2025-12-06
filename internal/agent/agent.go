@@ -132,7 +132,12 @@ func (a *Agent) Stop(ctx context.Context) error {
 func (a *Agent) initCollectors() error {
 	// System collector
 	if a.config.Collectors.System.Enabled {
-		sysCollector, err := collectors.NewSystemCollector(a.config.Collectors.System)
+		sysConfig := collectors.SystemConfig{
+			Enabled:  a.config.Collectors.System.Enabled,
+			Interval: a.config.Collectors.System.Interval,
+			Metrics:  a.config.Collectors.System.Metrics,
+		}
+		sysCollector, err := collectors.NewSystemCollector(sysConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create system collector: %w", err)
 		}
@@ -141,7 +146,12 @@ func (a *Agent) initCollectors() error {
 
 	// Process collector
 	if a.config.Collectors.Process.Enabled {
-		procCollector, err := collectors.NewProcessCollector(a.config.Collectors.Process)
+		procConfig := collectors.ProcessCollectorConfig{
+			Enabled:      a.config.Collectors.Process.Enabled,
+			Interval:     a.config.Collectors.Process.Interval,
+			MaxProcesses: a.config.Collectors.Process.MaxProcesses,
+		}
+		procCollector, err := collectors.NewProcessCollector(procConfig)
 		if err != nil {
 			return fmt.Errorf("failed to create process collector: %w", err)
 		}
@@ -150,22 +160,16 @@ func (a *Agent) initCollectors() error {
 
 	// Container collector
 	if a.config.Collectors.Container.Enabled {
-		containerCollector, err := collectors.NewContainerCollector(a.config.Collectors.Container)
+		containerConfig := collectors.ContainerCollectorConfig{
+			Enabled: a.config.Collectors.Container.Enabled,
+			Runtime: a.config.Collectors.Container.Runtime,
+		}
+		containerCollector, err := collectors.NewContainerCollector(containerConfig)
 		if err != nil {
 			a.logger.Warn("Failed to create container collector", zap.Error(err))
 			// Don't fail agent if container collector fails
 		} else {
 			a.collectors["container"] = containerCollector
-		}
-	}
-
-	// Custom collectors
-	if a.config.Collectors.Custom.Enabled {
-		customCollector, err := collectors.NewCustomCollector(a.config.Collectors.Custom)
-		if err != nil {
-			a.logger.Warn("Failed to create custom collector", zap.Error(err))
-		} else {
-			a.collectors["custom"] = customCollector
 		}
 	}
 

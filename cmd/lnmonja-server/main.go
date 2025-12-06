@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -52,7 +51,7 @@ func main() {
 	)
 
 	// Initialize storage
-	store, err := storage.NewTimeSeriesDB(config.Storage)
+	store, err := storage.NewTimeSeriesDB(&config.Storage, logger)
 	if err != nil {
 		logger.Fatal("Failed to initialize storage", zap.Error(err))
 	}

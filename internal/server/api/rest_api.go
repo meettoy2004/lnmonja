@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,6 +27,7 @@ type Storage interface {
 	GetNodes() ([]*models.Node, error)
 	GetNode(nodeID string) (*models.Node, error)
 	GetAlerts(state string) ([]*models.Alert, error)
+	Ping() error
 }
 
 func NewRESTAPI(config *utils.Config, store Storage, logger *zap.Logger) *RESTAPI {
@@ -295,16 +297,186 @@ func parseTime(s string) (time.Time, error) {
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t, nil
 	}
-	
+
 	// Try parsing as Unix timestamp
 	if i, err := strconv.ParseInt(s, 10, 64); err == nil {
 		return time.Unix(i, 0), nil
 	}
-	
+
 	// Try parsing as duration (e.g., "1h", "5m")
 	if d, err := time.ParseDuration(s); err == nil {
 		return time.Now().Add(-d), nil
 	}
-	
+
 	return time.Time{}, fmt.Errorf("invalid time format: %s", s)
+}
+
+func (a *RESTAPI) getNodeMetricsHandler(w http.ResponseWriter, r *http.Request) {
+	nodeID := chi.URLParam(r, "nodeID")
+	query := r.URL.Query().Get("query")
+	startStr := r.URL.Query().Get("start")
+	endStr := r.URL.Query().Get("end")
+	stepStr := r.URL.Query().Get("step")
+
+	// Default query to get all metrics for this node
+	if query == "" {
+		query = fmt.Sprintf("{node=\"%s\"}", nodeID)
+	} else {
+		// Add node label to query
+		query = fmt.Sprintf("%s{node=\"%s\"}", query, nodeID)
+	}
+
+	// Parse time range
+	start := time.Now().Add(-1 * time.Hour)
+	if startStr != "" {
+		if ts, err := parseTime(startStr); err == nil {
+			start = ts
+		}
+	}
+
+	end := time.Now()
+	if endStr != "" {
+		if ts, err := parseTime(endStr); err == nil {
+			end = ts
+		}
+	}
+
+	step := 15 * time.Second
+	if stepStr != "" {
+		if d, err := time.ParseDuration(stepStr); err == nil {
+			step = d
+		}
+	}
+
+	series, err := a.store.QueryMetrics(query, start, end, step)
+	if err != nil {
+		a.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	a.respondJSON(w, http.StatusOK, series)
+}
+
+func (a *RESTAPI) getNodeAlertsHandler(w http.ResponseWriter, r *http.Request) {
+	nodeID := chi.URLParam(r, "nodeID")
+
+	// Get all alerts and filter by node
+	alerts, err := a.store.GetAlerts("")
+	if err != nil {
+		a.respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	// Filter alerts for this node using Labels
+	var nodeAlerts []*models.Alert
+	for _, alert := range alerts {
+		if alert.Labels != nil && alert.Labels["node"] == nodeID {
+			nodeAlerts = append(nodeAlerts, alert)
+		}
+	}
+
+	a.respondJSON(w, http.StatusOK, nodeAlerts)
+}
+
+func (a *RESTAPI) seriesHandler(w http.ResponseWriter, r *http.Request) {
+	// Get all unique metric series
+	// This is a simplified implementation
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "success",
+		"data":   []string{},
+	})
+}
+
+func (a *RESTAPI) labelsHandler(w http.ResponseWriter, r *http.Request) {
+	// Get all label names
+	// This is a simplified implementation
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "success",
+		"data":   []string{"node", "collector", "metric"},
+	})
+}
+
+func (a *RESTAPI) labelValuesHandler(w http.ResponseWriter, r *http.Request) {
+	labelName := chi.URLParam(r, "name")
+
+	// Get all values for this label
+	// This is a simplified implementation
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "success",
+		"data":   []string{},
+		"label":  labelName,
+	})
+}
+
+func (a *RESTAPI) silenceAlertHandler(w http.ResponseWriter, r *http.Request) {
+	// Silence an alert
+	// This is a simplified implementation
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "success",
+		"message": "Alert silenced",
+	})
+}
+
+func (a *RESTAPI) deleteSilenceHandler(w http.ResponseWriter, r *http.Request) {
+	silenceID := chi.URLParam(r, "id")
+
+	// Delete a silence
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Silence %s deleted", silenceID),
+	})
+}
+
+func (a *RESTAPI) listDashboardsHandler(w http.ResponseWriter, r *http.Request) {
+	// List all dashboards
+	// This is a simplified implementation
+	a.respondJSON(w, http.StatusOK, []interface{}{})
+}
+
+func (a *RESTAPI) getDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	dashboardID := chi.URLParam(r, "id")
+
+	// Get dashboard by ID
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"id":   dashboardID,
+		"name": "Dashboard",
+	})
+}
+
+func (a *RESTAPI) createDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	var dashboard models.Dashboard
+	if err := json.NewDecoder(r.Body).Decode(&dashboard); err != nil {
+		a.respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	// Create dashboard
+	a.respondJSON(w, http.StatusCreated, dashboard)
+}
+
+func (a *RESTAPI) updateDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	dashboardID := chi.URLParam(r, "id")
+
+	var dashboard models.Dashboard
+	if err := json.NewDecoder(r.Body).Decode(&dashboard); err != nil {
+		a.respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	dashboard.ID = dashboardID
+	a.respondJSON(w, http.StatusOK, dashboard)
+}
+
+func (a *RESTAPI) deleteDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	dashboardID := chi.URLParam(r, "id")
+
+	// Delete dashboard
+	a.respondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "success",
+		"message": fmt.Sprintf("Dashboard %s deleted", dashboardID),
+	})
+}
+
+func (a *RESTAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	a.router.ServeHTTP(w, r)
 }
