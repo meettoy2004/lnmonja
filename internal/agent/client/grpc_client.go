@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/meettoy2004/lnmonja/pkg/protocol"
 	"github.com/meettoy2004/lnmonja/pkg/utils"
@@ -54,7 +53,8 @@ func (c *GRPCClient) Register(nodeID string) (string, error) {
 
 	sysInfo := utils.GetSystemInfo()
 
-	req := &protocol.RegisterRequest{
+	// In a real implementation, this would send the registration request via gRPC
+	_ = &protocol.RegisterRequest{
 		NodeId:   nodeID,
 		Hostname: sysInfo.Hostname,
 		Os:       sysInfo.OS,
