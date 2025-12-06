@@ -10,21 +10,6 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"` // json, console
-	Output string `yaml:"output"` // stdout, file, both
-	Path   string `yaml:"path"`
-	
-	Rotation struct {
-		Enabled    bool `yaml:"enabled"`
-		MaxSizeMB  int  `yaml:"max_size_mb"`
-		MaxAgeDays int  `yaml:"max_age_days"`
-		MaxBackups int  `yaml:"max_backups"`
-		Compress   bool `yaml:"compress"`
-	} `yaml:"rotation"`
-}
-
 func NewLogger(config LogConfig) (*zap.Logger, error) {
 	var level zapcore.Level
 	if err := level.UnmarshalText([]byte(config.Level)); err != nil {
