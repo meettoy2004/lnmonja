@@ -3,12 +3,16 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/meettoy2004/lnmonja/internal/models"
+	"github.com/meettoy2004/lnmonja/internal/storage"
 	"github.com/meettoy2004/lnmonja/pkg/protocol"
 	"github.com/meettoy2004/lnmonja/pkg/utils"
 	"go.uber.org/zap"
@@ -24,7 +28,7 @@ type GRPCServer struct {
 	server     *grpc.Server
 	listener   net.Listener
 	logger     *zap.Logger
-	store      Storage
+	store      storage.Storage
 	nodeMgr    *NodeManager
 	alertMgr   *AlertManager
 	sessions   map[string]*Session
@@ -41,7 +45,7 @@ type Session struct {
 	ConnectedAt time.Time
 }
 
-func NewGRPCServer(config *utils.Config, store Storage, logger *zap.Logger) (*GRPCServer, error) {
+func NewGRPCServer(config *utils.Config, store storage.Storage, logger *zap.Logger) (*GRPCServer, error) {
 	s := &GRPCServer{
 		config:   config,
 		logger:   logger,
