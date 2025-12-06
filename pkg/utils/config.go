@@ -159,6 +159,13 @@ type LogConfig struct {
 	Format string `yaml:"format"`
 	Output string `yaml:"output"`
 	Path   string `yaml:"path"`
+	Rotation struct {
+		Enabled    bool `yaml:"enabled"`
+		MaxSizeMB  int  `yaml:"max_size_mb"`
+		MaxAgeDays int  `yaml:"max_age_days"`
+		MaxBackups int  `yaml:"max_backups"`
+		Compress   bool `yaml:"compress"`
+	} `yaml:"rotation"`
 }
 
 func LoadConfig(path string) (*Config, error) {
