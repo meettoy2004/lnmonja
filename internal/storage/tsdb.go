@@ -108,7 +108,23 @@ func (db *TimeSeriesDB) WriteMetrics(metrics []*models.Metric) error {
 
 // QueryMetrics queries metrics based on the given query
 func (db *TimeSeriesDB) QueryMetrics(query *models.Query) ([]*models.TimeSeries, error) {
-	return db.badgerStore.QueryMetrics(query)
+	if query == nil {
+		return nil, fmt.Errorf("query is nil")
+	}
+
+	// Build query string from Query struct
+	queryStr := query.MetricName
+	if len(query.Labels) > 0 {
+		// Add label filters to query string
+		// Format: metric_name{label1="value1",label2="value2"}
+		var labelPairs []string
+		for k, v := range query.Labels {
+			labelPairs = append(labelPairs, fmt.Sprintf("%s=\"%s\"", k, v))
+		}
+		queryStr = fmt.Sprintf("%s{%s}", query.MetricName, string(labelPairs[0]))
+	}
+
+	return db.badgerStore.QueryMetrics(queryStr, query.StartTime, query.EndTime, query.Step)
 }
 
 // SaveNode saves a node to the database
