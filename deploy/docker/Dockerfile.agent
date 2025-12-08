@@ -16,9 +16,11 @@ RUN CGO_ENABLED=1 GOOS=linux go build -tags=ebpf -ldflags="-w -s" -o lnmonja-age
 # Final stage
 FROM alpine:3.18
 
-# Update and install runtime dependencies
-RUN apk update && apk upgrade && \
-    apk add --no-cache ca-certificates
+# Fix certificate issue by using HTTP repos first, then switch to HTTPS
+RUN sed -i 's/https/http/g' /etc/apk/repositories && \
+    apk update && \
+    apk add --no-cache ca-certificates && \
+    sed -i 's/http:/https:/g' /etc/apk/repositories
 
 WORKDIR /root/
 
