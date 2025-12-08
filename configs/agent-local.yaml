@@ -1,0 +1,41 @@
+agent:
+  node_id: ""  # Auto-detected from hostname
+  server_address: "localhost:9090"  # Connect to local server
+  batch_size: 100
+  max_batch_wait: 1s
+  heartbeat_interval: 30s
+
+collectors:
+  system:
+    enabled: true
+    interval: 1s  # 1-second granularity
+    metrics:
+      cpu: true
+      memory: true
+      load: true
+      disk: true
+      network: true
+      uptime: true
+
+  process:
+    enabled: true
+    interval: 5s
+    max_processes: 500
+
+  container:
+    enabled: false  # Disabled for basic testing
+    runtime: "docker"
+    docker_socket: "/var/run/docker.sock"
+
+logging:
+  level: "debug"  # Verbose logging for testing
+  format: "text"  # Human-readable
+  output: "stdout"  # Log to console
+  path: "./logs/agent.log"
+
+  rotation:
+    enabled: true
+    max_size_mb: 50
+    max_age_days: 7
+    max_backups: 3
+    compress: false
