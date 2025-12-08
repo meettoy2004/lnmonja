@@ -16,9 +16,11 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o lnmonja-server ./cmd/lnmonja-server
 
 # Final stage
-FROM alpine:latest
+FROM alpine:3.18
 
-RUN apk --no-cache add ca-certificates tzdata
+# Update certificates and install packages
+RUN apk update && apk upgrade && \
+    apk add --no-cache ca-certificates tzdata
 
 WORKDIR /root/
 
