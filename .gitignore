@@ -49,3 +49,10 @@ config.prod.yaml
 # Temporary files
 tmp/
 temp/
+
+# Web dashboard
+web/dashboard/node_modules/
+web/dashboard/dist/
+web/dashboard/.env
+web/dashboard/package-lock.json
+web/dashboard/.vite/

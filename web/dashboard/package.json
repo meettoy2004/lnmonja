@@ -17,10 +17,6 @@
 		"vite": "^4.0.0"
 	},
 	"dependencies": {
-		"echarts": "^5.4.0",
-		"echarts-for-svelte": "^1.0.0",
-		"reconnecting-websocket": "^4.4.0",
-		"date-fns": "^2.30.0",
 		"axios": "^1.4.0"
 	}
 }
