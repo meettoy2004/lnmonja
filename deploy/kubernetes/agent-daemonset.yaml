@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: lnmonja-agent
-  namespace: lnmonja
+  namespace: monitoring
 spec:
   selector:
     matchLabels:
@@ -12,79 +12,20 @@ spec:
       labels:
         app: lnmonja-agent
     spec:
-      serviceAccountName: lnmonja-agent
-      hostPID: true
       hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      hostPID: true
       containers:
       - name: agent
         image: lnmonja/agent:latest
-        imagePullPolicy: IfNotPresent
-        env:
-        - name: lnmonja_SERVER
-          value: "lnmonja-server.lnmonja.svc.cluster.local:9090"
-        - name: NODE_ID
-          valueFrom:
-            fieldRef:
-              fieldPath: spec.nodeName
-        - name: POD_NAME
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.name
-        - name: POD_NAMESPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
         securityContext:
           privileged: true
-          capabilities:
-            add:
-            - SYS_PTRACE
-            - SYS_ADMIN
-            - NET_ADMIN
-            - NET_RAW
-            - IPC_LOCK
+        env:
+        - name: SERVER_ADDRESS
+          value: "lnmonja-server:9090"
         volumeMounts:
-        - name: proc
-          mountPath: /host/proc
-          readOnly: true
-        - name: sys
-          mountPath: /sys
-          readOnly: true
-        - name: docker-sock
+        - name: docker-socket
           mountPath: /var/run/docker.sock
-          readOnly: true
-        - name: cgroup
-          mountPath: /sys/fs/cgroup
-          readOnly: true
-        - name: rootfs
-          mountPath: /rootfs
-          readOnly: true
-        - name: config
-          mountPath: /etc/lnmonja
-        resources:
-          requests:
-            memory: "64Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
       volumes:
-      - name: proc
-        hostPath:
-          path: /proc
-      - name: sys
-        hostPath:
-          path: /sys
-      - name: docker-sock
+      - name: docker-socket
         hostPath:
           path: /var/run/docker.sock
-      - name: cgroup
-        hostPath:
-          path: /sys/fs/cgroup
-      - name: rootfs
-        hostPath:
-          path: /
-      - name: config
-        configMap:
-          name: lnmonja-agent-config
