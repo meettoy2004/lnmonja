@@ -13,12 +13,12 @@ COPY . .
 # Build with eBPF support
 RUN CGO_ENABLED=1 GOOS=linux go build -tags=ebpf -ldflags="-w -s" -o lnmonja-agent ./cmd/lnmonja-agent
 
-# Final stage - use distroless for minimal footprint
-FROM gcr.io/distroless/base-debian11
+# Final stage
+FROM alpine:3.18
 
-# Copy necessary libraries for eBPF
-COPY --from=builder /lib/ld-musl-x86_64.so.1 /lib/ld-musl-x86_64.so.1
-COPY --from=builder /lib/libc.musl-x86_64.so.1 /lib/libc.musl-x86_64.so.1
+# Update and install runtime dependencies
+RUN apk update && apk upgrade && \
+    apk add --no-cache ca-certificates
 
 WORKDIR /root/
 
@@ -26,8 +26,8 @@ WORKDIR /root/
 COPY --from=builder /app/lnmonja-agent .
 COPY --from=builder /app/configs/agent-config.yaml /etc/lnmonja/config.yaml
 
-# Create non-root user (distroless has no adduser, but we'll run as non-root numeric)
-USER 65534:65534
+# Note: Agent needs root privileges for system monitoring
+# USER lnmonja
 
 ENTRYPOINT ["./lnmonja-agent"]
 CMD ["--config", "/etc/lnmonja/config.yaml"]
