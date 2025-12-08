@@ -52,7 +52,29 @@ For detailed local testing instructions without Docker, see [TEST-GUIDE.md](TEST
 curl http://localhost:8080/health
 ```
 
+### Web Dashboard
+
+LnMonja includes a modern web dashboard for managing nodes, viewing metrics, and configuring alerts.
+
+**Start the dashboard:**
+```bash
+cd web/dashboard
+npm install
+cp .env.example .env
+npm run dev
+```
+
+Access the dashboard at `http://localhost:5173`
+
+Features:
+- 📊 Real-time metrics visualization
+- 🖥️ Node and agent management
+- 🔔 Alert configuration and history
+- ⚙️ Settings and configuration
+
+For more details, see [web/dashboard/README.md](web/dashboard/README.md)
+
 ### Using Docker Compose
 ```bash
 docker-compose up -d
-# Access dashboard at http://localhost:8080
+# Access dashboard at http://localhost:80
