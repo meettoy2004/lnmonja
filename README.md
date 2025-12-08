@@ -36,6 +36,22 @@ CGO_ENABLED=0 go build -o lnmonja-agent ./cmd/lnmonja-agent
 go build -o lnmonja-cli ./cmd/lnmonja-cli
 ```
 
+### Testing Locally
+
+For detailed local testing instructions without Docker, see [TEST-GUIDE.md](TEST-GUIDE.md).
+
+**Quick test:**
+```bash
+# Terminal 1: Start server
+./lnmonja-server -config configs/server-local.yaml
+
+# Terminal 2: Start agent
+./lnmonja-agent -config configs/agent-local.yaml
+
+# Terminal 3: Test API
+curl http://localhost:8080/health
+```
+
 ### Using Docker Compose
 ```bash
 docker-compose up -d
