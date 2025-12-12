@@ -13,8 +13,8 @@ RUN sed -i 's/https/http/g' /etc/apk/repositories && \
 # Copy go mod files
 COPY go.mod go.sum ./
 
-# Download dependencies directly from source (bypass proxy.golang.org certificate issues)
-RUN GOPROXY=direct go mod download
+# Download dependencies directly from source (skip SSL verification for local testing)
+RUN GIT_SSL_NO_VERIFY=true GOPROXY=direct go mod download
 
 # Copy source code
 COPY . .
