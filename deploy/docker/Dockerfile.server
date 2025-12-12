@@ -7,7 +7,8 @@ RUN sed -i 's/https/http/g' /etc/apk/repositories && \
     apk update && \
     apk add --no-cache git gcc musl-dev ca-certificates && \
     sed -i 's/http:/https:/g' /etc/apk/repositories && \
-    update-ca-certificates
+    update-ca-certificates && \
+    git config --global http.sslCAInfo /etc/ssl/certs/ca-certificates.crt
 
 # Copy go mod files
 COPY go.mod go.sum ./
